@@ -55,6 +55,7 @@
 #include "vendor.h"
 #include "intel.h"
 #include "broadcom.h"
+#include "mynewt.h"
 #include "packet.h"
 
 #define COLOR_CHANNEL_LABEL		COLOR_WHITE
@@ -8247,6 +8248,8 @@ static const struct vendor_evt *current_vendor_evt(uint8_t evt)
 		return intel_vendor_evt(evt);
 	case 15:
 		return broadcom_vendor_evt(evt);
+	default:
+	    return mynewt_vendor_evt(evt);
 	}
 
 	return NULL;
