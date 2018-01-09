@@ -388,6 +388,7 @@ bool node_parse_composition(struct mesh_node *node, uint8_t *data, uint16_t len)
 	data++;
 	len--;
 
+	bt_shell_printf("GOT Composistion data");
 	comp->cid = get_le16(&data[0]);
 	comp->pid = get_le16(&data[2]);
 	comp->vid = get_le16(&data[4]);
@@ -407,8 +408,10 @@ bool node_parse_composition(struct mesh_node *node, uint8_t *data, uint16_t len)
 		uint16_t vendor_id;
 		struct mesh_element *ele;
 		ele = g_malloc0(sizeof(struct mesh_element));
-		if (!ele)
+		if (!ele) {
+			bt_shell_printf("Error on malloc");
 			return false;
+		}
 
 		ele->index = i;
 		ele->loc = get_le16(data);
@@ -423,8 +426,10 @@ bool node_parse_composition(struct mesh_node *node, uint8_t *data, uint16_t len)
 			mod_id = get_le16(data);
 			/* initialize uppper 16 bits to 0xffff for SIG models */
 			mod_id |= 0xffff0000;
-			if (!node_set_model(node, ele->index, mod_id))
+			if (!node_set_model(node, ele->index, mod_id)) {
+				bt_shell_printf("Error on node_set_model");
 				return false;
+			}
 			data += 2;
 			len -= 2;
 		}
@@ -432,8 +437,10 @@ bool node_parse_composition(struct mesh_node *node, uint8_t *data, uint16_t len)
 			mod_id = get_le16(data + 2);
 			vendor_id = get_le16(data);
 			mod_id |= (vendor_id << 16);
-			if (!node_set_model(node, ele->index, mod_id))
+			if (!node_set_model(node, ele->index, mod_id)) {
+				bt_shell_printf("Error on node_set_model 2");
 				return false;
+			}
 			data += 4;
 			len -= 4;
 		}

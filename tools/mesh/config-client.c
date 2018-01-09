@@ -80,11 +80,15 @@ static bool client_msg_recvd(uint16_t src, uint8_t *data,
 	int n;
 	uint16_t i;
 
+	bt_shell_printf("client_msg_recvd");
+
 	if (mesh_opcode_get(data, len, &opcode, &n)) {
 		len -= n;
 		data += n;
 	} else
 		return false;
+
+	bt_shell_printf("OPCODE 0x%02x", opcode);
 
 	if (IS_UNICAST(src)) {
 		node = node_find_by_addr(src);
@@ -103,9 +107,12 @@ static bool client_msg_recvd(uint16_t src, uint8_t *data,
 		return false;
 
 	case OP_DEV_COMP_STATUS:
-		if (len < MIN_COMPOSITION_LEN || !node)
+		if (len < MIN_COMPOSITION_LEN || !node) {
+			bt_shell_printf("LEN Too small ? %d", len);
 			break;
+		}
 		if (node_parse_composition(node, data, len)) {
+			bt_shell_printf("node_parse_composition");
 			if (!prov_db_add_node_composition(node, data, len))
 				break;
 		}
