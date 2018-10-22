@@ -975,6 +975,31 @@ int hci_devba(int dev_id, bdaddr_t *bdaddr)
 	return 0;
 }
 
+int hci_reset(int dd)
+{
+	evt_cmd_status rp;
+	struct hci_request rq;
+
+	memset(&rq, 0, sizeof(rq));
+	rq.ogf    = 0x03;
+	rq.ocf    = 0x0003;
+	rq.event  = EVT_CMD_COMPLETE;
+	rq.cparam = NULL;
+	rq.clen   = 0;
+	rq.rparam = &rp;
+	rq.rlen   = EVT_CONN_COMPLETE_SIZE;
+
+	if (hci_send_req(dd, &rq, 10000) < 0)
+		return -1;
+
+	if (rp.status) {
+		errno = EIO;
+		return -1;
+	}
+
+	return 0;
+}
+
 int hci_inquiry(int dev_id, int len, int nrsp, const uint8_t *lap,
 		inquiry_info **ii, long flags)
 {
@@ -2912,6 +2937,36 @@ int hci_read_clock(int dd, uint16_t handle, uint8_t which, uint32_t *clock,
 	return 0;
 }
 
+int hci_le_set_ext_scan_enable(int dd, uint8_t enable, uint8_t filter_dup, int to)
+{
+	struct hci_request rq;
+	le_set_ext_scan_enable_cp scan_cp;
+	uint8_t status;
+
+	memset(&scan_cp, 0, sizeof(scan_cp));
+	scan_cp.enable = enable;
+	scan_cp.filter_dup = filter_dup;
+	/* TODO add duration and period */
+
+	memset(&rq, 0, sizeof(rq));
+	rq.ogf = OGF_LE_CTL;
+	rq.ocf = OCF_LE_SET_EXT_SCAN_ENABLE;
+	rq.cparam = &scan_cp;
+	rq.clen = LE_SET_EXT_SCAN_ENABLE_CP_SIZE;
+	rq.rparam = &status;
+	rq.rlen = 1;
+
+	if (hci_send_req(dd, &rq, to) < 0)
+		return -1;
+
+	if (status) {
+		errno = EIO;
+		return -1;
+	}
+
+	return 0;
+}
+
 int hci_le_set_scan_enable(int dd, uint8_t enable, uint8_t filter_dup, int to)
 {
 	struct hci_request rq;
@@ -2927,6 +2982,60 @@ int hci_le_set_scan_enable(int dd, uint8_t enable, uint8_t filter_dup, int to)
 	rq.ocf = OCF_LE_SET_SCAN_ENABLE;
 	rq.cparam = &scan_cp;
 	rq.clen = LE_SET_SCAN_ENABLE_CP_SIZE;
+	rq.rparam = &status;
+	rq.rlen = 1;
+
+	if (hci_send_req(dd, &rq, to) < 0)
+		return -1;
+
+	if (status) {
+		errno = EIO;
+		return -1;
+	}
+
+	return 0;
+}
+
+int hci_le_set_ext_scan_parameters(int dd, uint8_t phy, uint8_t own_type,
+					uint8_t filter, uint8_t type,
+					uint16_t interval, uint16_t window,
+					int to)
+{
+	struct hci_request rq;
+	uint8_t buf[LE_SET_EXT_SCAN_PARAMETERS_CP_MAX_SIZE];
+	le_set_ext_scan_parameters_cp *param_cp;
+	uint8_t status;
+	int idx = 0;
+	int size = 8;
+
+	param_cp = (le_set_ext_scan_parameters_cp *) buf;
+	memset(param_cp, 0, sizeof(buf));
+	param_cp->own_bdaddr_type = own_type;
+	param_cp->filter = filter;
+	param_cp->phy = phy;
+
+	if (phy & 0x01) {
+		le_set_ext_scan_param_cp *p = &param_cp->params[idx++];
+		p->type = type;
+		p->interval = interval;
+		p->window = window;
+	}
+	if (phy & 0x04) {
+		le_set_ext_scan_param_cp *p = &param_cp->params[idx++];
+		p->type = type;
+		p->interval = interval;
+		p->window = window;
+	}
+
+	if (idx == 2) {
+		size += 5;
+	}
+
+	memset(&rq, 0, sizeof(rq));
+	rq.ogf = OGF_LE_CTL;
+	rq.ocf = OCF_LE_SET_EXT_SCAN_PARAMETERS;
+	rq.cparam = param_cp;
+	rq.clen = size;
 	rq.rparam = &status;
 	rq.rlen = 1;
 

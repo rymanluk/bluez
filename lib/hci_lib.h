@@ -50,6 +50,7 @@ struct hci_version {
 
 int hci_open_dev(int dev_id);
 int hci_close_dev(int dd);
+int hci_reset(int dd);
 int hci_send_cmd(int dd, uint16_t ogf, uint16_t ocf, uint8_t plen, void *param);
 int hci_send_req(int dd, struct hci_request *req, int timeout);
 
@@ -119,6 +120,11 @@ int hci_le_set_scan_enable(int dev_id, uint8_t enable, uint8_t filter_dup, int t
 int hci_le_set_scan_parameters(int dev_id, uint8_t type, uint16_t interval,
 					uint16_t window, uint8_t own_type,
 					uint8_t filter, int to);
+int hci_le_set_ext_scan_enable(int dd, uint8_t enable, uint8_t filter_dup, int to);
+int hci_le_set_ext_scan_parameters(int dd, uint8_t phy, uint8_t own_type,
+					uint8_t filter, uint8_t type,
+					uint16_t interval, uint16_t window,
+					int to);
 int hci_le_set_advertise_enable(int dev_id, uint8_t enable, int to);
 int hci_le_create_conn(int dd, uint16_t interval, uint16_t window,
 		uint8_t initiator_filter, uint8_t peer_bdaddr_type,

@@ -1741,6 +1741,30 @@ typedef struct {
 } __attribute__ ((packed)) le_set_address_resolution_enable_cp;
 #define LE_SET_ADDRESS_RESOLUTION_ENABLE_CP_SIZE 1
 
+typedef struct {
+	uint8_t		type;
+	uint16_t	interval;
+	uint16_t	window;
+} __attribute__ ((packed)) le_set_ext_scan_param_cp;
+
+#define OCF_LE_SET_EXT_SCAN_PARAMETERS		0x0041
+typedef struct {
+	uint8_t		own_bdaddr_type;
+	uint8_t		filter;
+	uint8_t 	phy;
+	le_set_ext_scan_param_cp params[0];
+} __attribute__ ((packed)) le_set_ext_scan_parameters_cp;
+#define LE_SET_EXT_SCAN_PARAMETERS_CP_MAX_SIZE 13
+
+#define OCF_LE_SET_EXT_SCAN_ENABLE			0x0042
+typedef struct {
+	uint8_t		enable;
+	uint8_t		filter_dup;
+	uint16_t	duration;
+	uint16_t	period;
+} __attribute__ ((packed)) le_set_ext_scan_enable_cp;
+#define LE_SET_EXT_SCAN_ENABLE_CP_SIZE 6
+
 /* Vendor specific commands */
 #define OGF_VENDOR_CMD		0x3f
 

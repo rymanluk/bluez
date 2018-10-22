@@ -464,6 +464,24 @@ static void cmd_dev(int dev_id, int argc, char **argv)
 	hci_for_each_dev(HCI_UP, dev_info, 0);
 }
 
+/* Reset devices */
+
+static void cmd_reset(int dev_id, int argc, char **argv)
+{
+	int dd;
+
+	if (dev_id < 0)
+		dev_id = hci_get_route(NULL);
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0) {
+		perror("Could not open device");
+		exit(1);
+	}
+
+	hci_reset(dd);
+}
+
 /* Inquiry */
 
 static struct option inq_options[] = {
@@ -2454,7 +2472,7 @@ static int print_advertising_devices(int dd, uint8_t filter_type)
 
 		meta = (void *) ptr;
 
-		if (meta->subevent != 0x02)
+		if (meta->subevent != 0x02 && meta->subevent != 0x0d)
 			goto done;
 
 		/* Ignoring multiple reports */
@@ -2489,6 +2507,7 @@ static struct option lescan_options[] = {
 	{ "whitelist",	0, 0, 'w' },
 	{ "discovery",	1, 0, 'd' },
 	{ "duplicates",	0, 0, 'D' },
+	{ "extended", 	1, 0, 'e' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -2499,7 +2518,9 @@ static const char *lescan_help =
 	"\tlescan [--whitelist] scan for address in the whitelist only\n"
 	"\tlescan [--discovery=g|l] enable general or limited discovery"
 		"procedure\n"
-	"\tlescan [--duplicates] don't filter duplicates\n";
+	"\tlescan [--duplicates] don't filter duplicates\n"
+	"\tlescan [--extended=u|c|b] extended scan on uncoded or coded or both PHYs\n";
+
 
 static void cmd_lescan(int dev_id, int argc, char **argv)
 {
@@ -2511,8 +2532,11 @@ static void cmd_lescan(int dev_id, int argc, char **argv)
 	uint16_t interval = htobs(0x0010);
 	uint16_t window = htobs(0x0010);
 	uint8_t filter_dup = 0x01;
+	uint8_t extended = 0;
+	uint8_t phy_code = 0;
+	uint8_t phy = 0;
 
-	for_each_opt(opt, lescan_options, NULL) {
+	for_each_opt(opt, lescan_options, "hspPwd:De:") {
 		switch (opt) {
 		case 's':
 			own_type = LE_RANDOM_ADDRESS;
@@ -2539,6 +2563,21 @@ static void cmd_lescan(int dev_id, int argc, char **argv)
 		case 'D':
 			filter_dup = 0x00;
 			break;
+		case 'e':
+			extended = 1;
+			phy_code = optarg[0];
+			fprintf(stderr, "Extended scan %d\n", (int)phy_code);
+			if (phy_code == 'u') {
+				phy = 0x01;
+			} else if (phy_code == 'c') {
+				phy = 0x04;
+			} else if (phy_code == 'b') {
+				phy = 0x05;
+			} else {
+				fprintf(stderr, "Unknown PHY\n");
+				exit(1);
+			}
+			break;
 		default:
 			printf("%s", lescan_help);
 			return;
@@ -2555,14 +2594,26 @@ static void cmd_lescan(int dev_id, int argc, char **argv)
 		exit(1);
 	}
 
-	err = hci_le_set_scan_parameters(dd, scan_type, interval, window,
-						own_type, filter_policy, 10000);
+	if (extended) {
+		err = hci_le_set_ext_scan_parameters(dd, phy, own_type,
+							filter_policy,
+							scan_type, interval,
+							window, 10000);
+	} else {
+		err = hci_le_set_scan_parameters(dd, scan_type, interval,
+							window, own_type,
+							filter_policy, 10000);
+	}
 	if (err < 0) {
 		perror("Set scan parameters failed");
 		exit(1);
 	}
 
-	err = hci_le_set_scan_enable(dd, 0x01, filter_dup, 10000);
+	if (extended) {
+		err = hci_le_set_ext_scan_enable(dd, 0x01, filter_dup, 10000);
+	} else {
+		err = hci_le_set_scan_enable(dd, 0x01, filter_dup, 10000);
+	}
 	if (err < 0) {
 		perror("Enable scan failed");
 		exit(1);
@@ -2576,7 +2627,11 @@ static void cmd_lescan(int dev_id, int argc, char **argv)
 		exit(1);
 	}
 
-	err = hci_le_set_scan_enable(dd, 0x00, filter_dup, 10000);
+	if (extended) {
+		err = hci_le_set_ext_scan_enable(dd, 0x00, filter_dup, 10000);
+	} else {
+		err = hci_le_set_scan_enable(dd, 0x00, filter_dup, 10000);
+	}
 	if (err < 0) {
 		perror("Disable scan failed");
 		exit(1);
@@ -3381,6 +3436,7 @@ static struct {
 	char *doc;
 } command[] = {
 	{ "dev",      cmd_dev,     "Display local devices"                },
+	{ "reset",    cmd_reset,   "Reset hci"				  },
 	{ "inq",      cmd_inq,     "Inquire remote devices"               },
 	{ "scan",     cmd_scan,    "Scan for remote devices"              },
 	{ "name",     cmd_name,    "Get name from remote device"          },
