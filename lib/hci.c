@@ -2967,6 +2967,34 @@ int hci_le_set_ext_scan_enable(int dd, uint8_t enable, uint8_t filter_dup, int t
 	return 0;
 }
 
+int hci_le_set_event_mask(int dd, uint32_t mask, int to)
+{
+	struct hci_request rq;
+	set_event_mask_cp evmask_cp;
+	uint8_t status;
+
+	memset(&evmask_cp, 0, sizeof(evmask_cp));
+	memcpy(evmask_cp.mask, &mask, sizeof(uint32_t));
+
+	memset(&rq, 0, sizeof(rq));
+	rq.ogf = OGF_LE_CTL;
+	rq.ocf = OCF_LE_SET_EVENT_MASK;
+	rq.cparam = &evmask_cp;
+	rq.clen = LE_SET_EVENT_MASK_CP_SIZE;
+	rq.rparam = &status;
+	rq.rlen = 1;
+
+	if (hci_send_req(dd, &rq, to) < 0)
+		return -1;
+
+	if (status) {
+		errno = EIO;
+		return -1;
+	}
+
+	return 0;
+}
+
 int hci_le_set_scan_enable(int dd, uint8_t enable, uint8_t filter_dup, int to)
 {
 	struct hci_request rq;

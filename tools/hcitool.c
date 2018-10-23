@@ -482,6 +482,44 @@ static void cmd_reset(int dev_id, int argc, char **argv)
 	hci_reset(dd);
 }
 
+static struct option evmask_options[] = {
+	{ "help",	0, 0, 'h' },
+	{ "mask",	1, 0, 'm' },
+	{ 0, 0, 0, 0 }
+};
+
+static const char *evmask_help =
+	"Usage:\n"
+	"\tevmask [--mask=N] Even mast as specified in BT 5, Vol 2, Part E, 7.8.1 \n";
+
+static void cmd_evmask(int dev_id, int argc, char **argv)
+{
+	int dd, opt;
+	uint32_t mask = 0x1F;
+
+	if (dev_id < 0)
+		dev_id = hci_get_route(NULL);
+
+	dd = hci_open_dev(dev_id);
+	if (dd < 0) {
+		perror("Could not open device");
+		exit(1);
+	}
+
+	for_each_opt(opt, evmask_options, "hm:") {
+		switch (opt) {
+		case 'm':
+			mask = strtol(optarg, NULL, 0);
+			break;
+		case 'h':
+		default:
+			printf("%s", evmask_help);
+			return;
+		}
+	}
+
+	hci_le_set_event_mask(dd, mask, 10000);
+}
 /* Inquiry */
 
 static struct option inq_options[] = {
@@ -3437,6 +3475,7 @@ static struct {
 } command[] = {
 	{ "dev",      cmd_dev,     "Display local devices"                },
 	{ "reset",    cmd_reset,   "Reset hci"				  },
+	{ "evmask",   cmd_evmask,  "Set le event mask"			  },
 	{ "inq",      cmd_inq,     "Inquire remote devices"               },
 	{ "scan",     cmd_scan,    "Scan for remote devices"              },
 	{ "name",     cmd_name,    "Get name from remote device"          },
